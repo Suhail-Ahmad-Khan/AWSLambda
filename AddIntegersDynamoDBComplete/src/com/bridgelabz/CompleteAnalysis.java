@@ -11,10 +11,16 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
+import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.UpdateItemOutcome;
+import com.amazonaws.services.dynamodbv2.document.spec.DeleteItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
+import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec;
+import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
@@ -50,9 +56,8 @@ public class CompleteAnalysis {
 			System.out.println("5.  Update items in the Table");
 			System.out.println("6.  Delete items from the Table");
 			System.out.println("7.  Delete Table from the DynamoDB");
-			System.out.println("8.  Query DynamoDB");
-			System.out.println("9.  Scan DynamoDB");
-			System.out.println("10. Quit the Program");
+			System.out.println("8.  Scan DynamoDB");
+			System.out.println("9.  Quit the Program");
 			System.out.print("Enter Your Choice: ");
 			choice = scanner.nextInt();
 
@@ -78,22 +83,18 @@ public class CompleteAnalysis {
 				break;
 
 			case 6:
-				deleteItemsFromTable();
+				deleteItemsFromTable(dynamoDB, tableName);
 				break;
 
 			case 7:
-				deleteTable();
+				deleteTable(dynamoDB, tableName);
 				break;
 
 			case 8:
-				queryDatabase();
+				scanDatabase(dynamoDB, tableName);
 				break;
 
 			case 9:
-				scanDatabase();
-				break;
-
-			case 10:
 				System.out.println("Program Terminated");
 				return;
 
@@ -152,18 +153,18 @@ public class CompleteAnalysis {
 			int uniqueId = currentNode.path("uniqueId").asInt();
 			int number1 = currentNode.path("number1").asInt();
 			int number2 = currentNode.path("number2").asInt();
-			int result = number1 + number2;
+			int result1 = number1 + number2;
 
 			try {
 
 				Item item = new Item().withPrimaryKey("uniqueId", uniqueId).withNumber("number1", number1)
-						.withNumber("number2", number2).withNumber("result", result);
+						.withNumber("number2", number2).withNumber("result1", result1);
 
 				table.putItem(item);
-				System.out.println("PutItem succeeded: " + number1 + " " + number2 + " " + result);
+				System.out.println("PutItem succeeded: " + number1 + " " + number2 + " " + result1);
 
 			} catch (Exception e) {
-				System.err.println("Unable to add result: " + number1 + " " + number2 + " " + result);
+				System.err.println("Unable to add result: " + number1 + " " + number2 + " " + result1);
 				System.err.println(e.getMessage());
 				break;
 			}
@@ -182,17 +183,17 @@ public class CompleteAnalysis {
 		int uniqueId = 11;
 		int number1 = 234;
 		int number2 = 523;
-		int result = number1 + number2;
+		int result1 = number1 + number2;
 
 		try {
 			Item item = new Item().withPrimaryKey("uniqueId", uniqueId).withNumber("number1", number1)
-					.withNumber("number2", number2).withNumber("result", result);
+					.withNumber("number2", number2).withNumber("result1", result1);
 
 			table.putItem(item);
-			System.out.println("PutItem succeeded: " + number1 + " " + number2 + " " + result);
+			System.out.println("PutItem succeeded: " + number1 + " " + number2 + " " + result1);
 
 		} catch (Exception e) {
-			System.err.println("Unable to add result: " + number1 + " " + number2 + " " + result);
+			System.err.println("Unable to add result: " + number1 + " " + number2 + " " + result1);
 			System.err.println(e.getMessage());
 		}
 	}
@@ -216,13 +217,13 @@ public class CompleteAnalysis {
 	}
 
 	private static void updateItemsInTable(DynamoDB dynamoDB, String tableName) {
-		
+
 		Table table = dynamoDB.getTable(tableName);
 		int uniqueId = 11;
 
-		UpdateItemSpec updateItemSpec = new UpdateItemSpec()
-				.withPrimaryKey("uniqueId", uniqueId)
-				.withNumber(":res", 610)
+		UpdateItemSpec updateItemSpec = new UpdateItemSpec().withPrimaryKey("uniqueId", uniqueId)
+				.withUpdateExpression("set number1 = :num1, number2 = :num2, result1 = :res")
+				.withValueMap(new ValueMap().withNumber(":num1", 55).withNumber(":num2", 55).withNumber(":res", 110))
 				.withReturnValues(ReturnValue.UPDATED_NEW);
 
 		try {
@@ -237,24 +238,64 @@ public class CompleteAnalysis {
 
 	}
 
-	private static void deleteItemsFromTable() {
-		// TODO Auto-generated method stub
+	private static void deleteItemsFromTable(DynamoDB dynamoDB, String tableName) {
+
+		Table table = dynamoDB.getTable(tableName);
+
+		int uniqueId = 0;
+
+		DeleteItemSpec deleteItemSpec = new DeleteItemSpec().withPrimaryKey(new PrimaryKey("uniqueId", 11));
+
+		try {
+			System.out.println("Attempting a conditional delete...");
+			table.deleteItem(deleteItemSpec);
+			System.out.println("DeleteItem succeeded");
+		} catch (Exception e) {
+			System.err.println("Unable to delete item: " + uniqueId);
+			System.err.println(e.getMessage());
+		}
 
 	}
 
-	private static void deleteTable() {
-		// TODO Auto-generated method stub
+	private static void deleteTable(DynamoDB dynamoDB, String tableName) {
+
+		Table table = dynamoDB.getTable(tableName);
+
+		try {
+			System.out.println("Attempting to delete table; please wait...");
+			table.delete();
+			table.waitForDelete();
+			System.out.print("Success.");
+
+		} catch (Exception e) {
+			System.err.println("Unable to delete table: ");
+			System.err.println(e.getMessage());
+		}
 
 	}
 
-	private static void queryDatabase() {
-		// TODO Auto-generated method stub
+	private static void scanDatabase(DynamoDB dynamoDB, String tableName) {
 
-	}
+		Table table = dynamoDB.getTable(tableName);
 
-	private static void scanDatabase() {
-		// TODO Auto-generated method stub
+		ScanSpec scanSpec = new ScanSpec().withProjectionExpression("#uniqueId, number1, number2, result1")
+				.withFilterExpression("#uniqueId between :start and :end")
+				.withNameMap(new NameMap().with("#uniqueId", "uniqueId"))
+				.withValueMap(new ValueMap().withNumber(":start", 3).withNumber(":end", 8));
 
+		try {
+			ItemCollection<ScanOutcome> items = table.scan(scanSpec);
+
+			Iterator<Item> iter = items.iterator();
+			while (iter.hasNext()) {
+				Item item = iter.next();
+				System.out.println(item.toString());
+			}
+
+		} catch (Exception e) {
+			System.err.println("Unable to scan the table:");
+			System.err.println(e.getMessage());
+		}
 	}
 
 }// end of class
