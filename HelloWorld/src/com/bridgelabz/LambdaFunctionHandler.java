@@ -9,7 +9,7 @@ public class LambdaFunctionHandler implements RequestHandler<String, String> {
 	public String handleRequest(String input, Context context) {
 		context.getLogger().log("Input: " + input);
 
-		String output = input + " Welcome To Bridgelabxz";
+		String output = input + " Welcome To Bridgelabz";
 
 		// TODO: implement your handler
 		return output;
